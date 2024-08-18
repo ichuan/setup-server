@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "setup-server"
+version = "0.1.0"
+description = ""
+authors = ["ichuan <328225+ichuan@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fabric = "^3.2.2"
+patchwork = {git = "https://github.com/ichuan/patchwork"}
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"

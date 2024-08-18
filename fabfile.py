@@ -1,12 +1,12 @@
 import json
 import textwrap
 import urllib.request
-from typing import Self
-from itertools import zip_longest
 from functools import total_ordering
+from itertools import zip_longest
+from typing import Self
 
-from fabric import task, Connection
-from patchwork.files import exists, contains, append
+from fabric import Connection, task
+from patchwork.files import append, contains, exists
 
 
 @total_ordering
@@ -89,7 +89,8 @@ def debian(c: type[Connection]):
     systemd_conf = '/etc/systemd/system.conf'
     if exists(c, systemd_conf):
         c.sudo(
-            f'sed -i "s/^#DefaultLimitNOFILE=.*/DefaultLimitNOFILE=500000/g" {systemd_conf}',
+            'sed -i '
+            f'"s/^#DefaultLimitNOFILE=.*/DefaultLimitNOFILE=500000/g" {systemd_conf}',
             warn=True,
         )
     # sysctl.conf
@@ -189,12 +190,15 @@ def docker(c: type[Connection]):
     c.sudo('apt install -yq apt-transport-https ca-certificates curl')
     c.sudo('install -m 0755 -d /etc/apt/keyrings')
     c.sudo(
-        'curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc'
+        'curl -fsSL https://download.docker.com/linux/debian/gpg '
+        '-o /etc/apt/keyrings/docker.asc'
     )
     c.sudo('chmod a+r /etc/apt/keyrings/docker.asc')
     codename = _get_output(c, 'lsb_release -sc')
     c.run(
-        f'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian {codename} stable" | sudo tee /etc/apt/sources.list.d/docker.list'
+        'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] '
+        f'https://download.docker.com/linux/debian {codename} stable" '
+        '| sudo tee /etc/apt/sources.list.d/docker.list'
     )
     c.sudo('apt update -yq')
     c.sudo(
@@ -266,7 +270,7 @@ def _poetry(c: type[Connection]):
     _sh = textwrap.dedent(
         r"""
         export PATH="$HOME/.pyenv/bin:$PATH"
-        export PYENV_VERSION=`pyenv versions --bare --skip-aliases | sort -V | tail -n 1`
+        export PYENV_VERSION=`pyenv versions --bare --skip-aliases|sort -V | tail -n 1`
         curl -sSL https://install.python-poetry.org | pyenv exec python -
         # bin
         echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bash_profile

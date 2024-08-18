@@ -23,6 +23,17 @@ line-length = 88
 indent-width = 4
 target-version = "py312"
 
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # isort
+    "I",
+]
+fixable = ["ALL"]
+
 [tool.ruff.format]
 quote-style = "single"
 indent-style = "space"

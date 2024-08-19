@@ -1,4 +1,5 @@
 import json
+import os
 import textwrap
 import urllib.request
 from functools import total_ordering
@@ -13,7 +14,7 @@ from patchwork.files import append, contains, exists
 class Version:
     def __init__(self, ver: str):
         self.value = ver
-        self.ver1, self.ver2 = self.normalize()
+        self.ver1, self.ver2 = self.normalize(ver)
 
     def normalize(self, ver: str) -> tuple[list[int], list[int | str]]:
         y = ver.split('-', 1)
@@ -186,6 +187,9 @@ def docker(c: type[Connection]):
     Install docker and docker-compose on debian/ubuntu
     """
     # https://docs.docker.com/engine/install/debian/
+    if c.run('which docker', warn=True).ok:
+        print('Already installed docker')
+        return
     c.sudo('apt update -yq')
     c.sudo('apt install -yq apt-transport-https ca-certificates curl')
     c.sudo('install -m 0755 -d /etc/apt/keyrings')
@@ -216,7 +220,7 @@ def docker(c: type[Connection]):
         c.run('sudo usermod -a -G docker $USER', warn=True)
 
 
-@task(optional=['gb'])
+@task(help={'gb': 'Size of the swapfile (GB)'})
 def swap(c: type[Connection], gb: int = 1):
     """
     Install a swapfile, default to 1GB
@@ -279,3 +283,46 @@ def _poetry(c: type[Connection]):
         """
     )
     c.run(_sh)
+
+
+@task(
+    help={
+        'domain': 'A domain name pointing to the server executeing this task',
+        'password': 'Password of the proxy. Will generate a new one if not provided',
+    }
+)
+def trojan(c: type[Connection], domain: str, password: str = ''):
+    """
+    Install a trojan proxy (requires docker and a domain name)
+    """
+    if not domain:
+        print('domain needed')
+        return
+    path = '$HOME/trojan'
+    if exists(c, path):
+        print('trojan already installed')
+        return
+    if not password:
+        password = os.urandom(16).hex()
+        print(f'Generated password: {password}')
+    c.run(f'mkdir -p {path} {path}/acme.sh', warn=True)
+    c.run(
+        'docker volume create --driver local --opt type=none '
+        f'--opt device={path}/acme.sh --opt o=bind acme.sh'
+    )
+    # fetching SSL certs
+    c.run(
+        'docker run -i --rm --name acme.sh -p 80:80 -v acme.sh:/root/.acme.sh '
+        '--entrypoint bash ghcr.io/ichuan/trojan-docker -c '
+        '"/etc/init.d/nginx start ; /root/.acme.sh/acme.sh --home /root/.acme.sh '
+        f'--issue --server letsencrypt -d {domain} -w /var/www/html"'
+    )
+    # start
+    c.run(
+        r"echo -e '#!/bin/bash\ndocker run --restart always -id --name trojan "
+        r'-p 443:443 -p 80:80 -v acme.sh:/root/.acme.sh -e '
+        rf'DOMAIN="{domain}" -e PASSWORD="{password}" '
+        rf"ghcr.io/ichuan/trojan-docker' > {path}/start.sh"
+    )
+    c.run(f'chmod +x {path}/start.sh && {path}/start.sh')
+    print(f'Done. Remember the password: {password}')

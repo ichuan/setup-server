@@ -32,7 +32,6 @@ select = [
     # isort
     "I",
 ]
-fixable = ["ALL"]
 
 [tool.ruff.format]
 quote-style = "single"

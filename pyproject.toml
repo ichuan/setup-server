@@ -36,3 +36,7 @@ select = [
 [tool.ruff.format]
 quote-style = "single"
 indent-style = "space"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"

@@ -66,13 +66,7 @@ def debian(c: type[Connection]):
     # c.sudo('systemctl enable ntp.service')
     # c.sudo('systemctl start ntp.service')
     # dotfiles
-    c.run(
-        '[ ! -f ~/.tmux.conf ] && { '
-        'wget https://github.com/ichuan/dotfiles/releases/latest/download/dotfiles.'
-        'tar.gz -O - | tar xzf - && bash dotfiles/bootstrap.sh -f; }',
-        warn=True,
-    )
-    c.run('rm -rf dotfiles ~/Tomorrow_Night_Bright.terminal')
+    dotfiles(c)
     # UTC timezone
     c.sudo('cp /usr/share/zoneinfo/UTC /etc/localtime', warn=True)
     # limits.conf, max open files
@@ -123,6 +117,20 @@ def debian(c: type[Connection]):
         if not contains(c, '/etc/sysctl.conf', line):
             append(c, '/etc/sysctl.conf', line)
     c.sudo('sysctl -p')
+
+
+@task
+def dotfiles(c: type[Connection]):
+    """
+    dotfiles
+    """
+    c.run(
+        '[ ! -f ~/.tmux.conf ] && { '
+        'wget https://github.com/ichuan/dotfiles/releases/latest/download/dotfiles.'
+        'tar.gz -O - | tar xzf - && bash dotfiles/bootstrap.sh -f; }',
+        warn=True,
+    )
+    c.run('rm -rf dotfiles ~/Tomorrow_Night_Bright.terminal ~/iTerm.profile.json')
 
 
 @task
@@ -240,8 +248,8 @@ def swap(c: type[Connection], gb: int = 1):
         append(c, '/etc/fstab', line)
 
 
-@task
-def python(c: type[Connection]):
+@task(help={'version': 'which latest version to install. default: 3'})
+def python(c: type[Connection], version: str = '3'):
     """
     Install pyenv, latest python3 and poetry
     """
@@ -263,7 +271,7 @@ def python(c: type[Connection]):
                 r'command -v pyenv > /dev/null && eval \"\$(pyenv init --path)\"" '
                 r'>> ~/.bash_profile'
             )
-    c.run('source ~/.bash_profile && pyenv install 3:latest', warn=True)
+    c.run(f'source ~/.bash_profile && pyenv install {version}:latest', warn=True)
     _poetry(c)
 
 

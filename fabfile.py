@@ -13,6 +13,7 @@ from patchwork.files import append, contains, exists
 @total_ordering
 class Version:
     def __init__(self, ver: str):
+        ver = ver.lstrip('v')
         self.value = ver
         self.ver1, self.ver2 = self.normalize(ver)
 
@@ -288,6 +289,7 @@ def _poetry(c: type[Connection]):
         echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bash_profile
         echo "export POETRY_VIRTUALENVS_IN_PROJECT=true" >> ~/.bash_profile
         echo "export POETRY_VIRTUALENVS_PREFER_ACTIVE_PYTHON=true" >> ~/.bash_profile
+        source ~/.bash_profile && poetry self add poetry-plugin-shell
         """
     )
     c.run(_sh)

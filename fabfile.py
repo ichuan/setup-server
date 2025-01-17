@@ -201,21 +201,24 @@ def docker(c: type[Connection]):
         return
     c.sudo('apt update -yq')
     c.sudo('apt install -yq apt-transport-https ca-certificates curl')
+    c.sudo('apt remove -y docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc', warn=True)
     c.sudo('install -m 0755 -d /etc/apt/keyrings')
+    dist = _get_output(c, 'lsb_release -si').lower()
     c.sudo(
-        'curl -fsSL https://download.docker.com/linux/debian/gpg '
+        f'curl -fsSL https://download.docker.com/linux/{dist}/gpg '
         '-o /etc/apt/keyrings/docker.asc'
     )
     c.sudo('chmod a+r /etc/apt/keyrings/docker.asc')
     codename = _get_output(c, 'lsb_release -sc')
     c.run(
         'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] '
-        f'https://download.docker.com/linux/debian {codename} stable" '
+        f'https://download.docker.com/linux/{dist} {codename} stable" '
         '| sudo tee /etc/apt/sources.list.d/docker.list'
     )
     c.sudo('apt update -yq')
     c.sudo(
-        'apt install -yq docker-ce docker-ce-cli containerd.io docker-compose-plugin'
+        'apt install -yq docker-ce docker-ce-cli containerd.io '
+        'docker-buildx-plugin docker-compose-plugin'
     )
     # docker logging rotate
     c.run(

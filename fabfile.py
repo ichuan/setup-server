@@ -247,7 +247,7 @@ def swap(c: type[Connection], gb: int = 1):
     c.sudo(f'swapon {path}')
     if not contains(c, '/etc/sysctl.conf', 'vm.swappiness=10'):
         append(c, '/etc/sysctl.conf', 'vm.swappiness=10')
-    line = f'{path} none swap sw 00'
+    line = f'{path} none swap sw 0 0'
     if not contains(c, '/etc/fstab', line):
         append(c, '/etc/fstab', line)
 

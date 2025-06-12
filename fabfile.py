@@ -60,7 +60,7 @@ def debian(c: type[Connection]):
     c.sudo(
         'apt-get install -yq git unzip curl wget tar sudo zip '
         'sqlite3 tmux ntp build-essential gettext libcap2-bin netcat-traditional '
-        'silversearcher-ag htop jq dirmngr cron rsync locales net-tools'
+        'silversearcher-ag htop jq dirmngr cron rsync locales net-tools git-lfs'
     )
     # add-apt-repository
     c.sudo('apt-get install -yq software-properties-common', warn=True)
@@ -201,7 +201,10 @@ def docker(c: type[Connection]):
         return
     c.sudo('apt update -yq')
     c.sudo('apt install -yq apt-transport-https ca-certificates curl')
-    c.sudo('apt remove -y docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc', warn=True)
+    c.sudo(
+        'apt remove -y docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc',
+        warn=True,
+    )
     c.sudo('install -m 0755 -d /etc/apt/keyrings')
     dist = _get_output(c, 'lsb_release -si').lower()
     c.sudo(

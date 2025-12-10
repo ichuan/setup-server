@@ -58,7 +58,7 @@ def debian(c: type[Connection]):
         '-o Dpkg::Options::="--force-confold" upgrade'
     )
     c.sudo(
-        'apt-get install -yq git unzip curl wget tar sudo zip '
+        'apt-get install -yq git unzip curl wget tar sudo zip ripgrep tree '
         'sqlite3 tmux ntp build-essential gettext libcap2-bin netcat-traditional '
         'silversearcher-ag htop jq dirmngr cron rsync locales net-tools git-lfs'
     )
@@ -127,8 +127,8 @@ def dotfiles(c: type[Connection]):
     """
     c.run(
         '[ ! -f ~/.tmux.conf ] && { '
-        'wget https://github.com/ichuan/dotfiles/releases/latest/download/dotfiles.'
-        'tar.gz -O - | tar xzf - && bash dotfiles/bootstrap.sh -f; }',
+        'wget https://github.com/ichuan/dotfiles/archive/refs/tags/latest.tar.gz -O - '
+        '| tar xzf - && bash dotfiles-latest/bootstrap.sh -f; }',
         warn=True,
     )
     c.run('rm -rf dotfiles ~/Tomorrow_Night_Bright.terminal ~/iTerm.profile.json')
@@ -201,10 +201,10 @@ def docker(c: type[Connection]):
         return
     c.sudo('apt update -yq')
     c.sudo('apt install -yq apt-transport-https ca-certificates curl')
-    c.sudo(
-        'apt remove -y docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc',
-        warn=True,
-    )
+    # c.sudo(
+    #     'apt remove -y docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc',
+    #     warn=True,
+    # )
     c.sudo('install -m 0755 -d /etc/apt/keyrings')
     dist = _get_output(c, 'lsb_release -si').lower()
     c.sudo(
@@ -253,6 +253,45 @@ def swap(c: type[Connection], gb: int = 1):
     line = f'{path} none swap sw 0 0'
     if not contains(c, '/etc/fstab', line):
         append(c, '/etc/fstab', line)
+
+
+@task(help={'username': 'Username to create', 'key': 'SSH public key for the user'})
+def user(c: type[Connection], username: str = 'dev', key: str = ''):
+    """
+    Create a user with sudo privileges (passwordless) and optional SSH key
+    """
+    # Install sudo if needed
+    if not c.run('which sudo', warn=True).ok:
+        c.run('apt-get update')
+        c.run('DEBIAN_FRONTEND=noninteractive apt-get install -y sudo')
+
+    # Create user
+    if c.run(f'id -u {username}', warn=True).ok:
+        print(f'[INFO] User {username} already exists, skipping creation.')
+    else:
+        c.sudo(f'adduser --disabled-password --gecos "" --shell /bin/bash {username}')
+
+    # Add to sudo group
+    c.sudo(f'usermod -aG sudo {username}')
+
+    # Passwordless sudo
+    nopasswd_file = f'/etc/sudoers.d/99_{username}_nopasswd'
+    c.sudo(f'echo "{username} ALL=(ALL) NOPASSWD:ALL" > {nopasswd_file}')
+    c.sudo(f'chmod 440 {nopasswd_file}')
+
+    # Configure SSH key if provided
+    if key:
+        user_home = _get_output(c, f'getent passwd {username} | cut -d: -f6')
+        ssh_dir = f'{user_home}/.ssh'
+        auth_file = f'{ssh_dir}/authorized_keys'
+
+        c.sudo(f'mkdir -p {ssh_dir}')
+        c.sudo(f'chmod 700 {ssh_dir}')
+        c.sudo(f'echo "{key}" > {auth_file}')
+        c.sudo(f'chmod 600 {auth_file}')
+        c.sudo(f'chown -R {username}:{username} {ssh_dir}')
+
+    print(f'=== User {username} created with sudo privileges (passwordless) ===')
 
 
 @task(help={'version': 'which latest version to install. default: 3'})
